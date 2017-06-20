@@ -1,0 +1,6 @@
+[program:spring_app_autostart]
+command=java -jar /tmp/java_app/spring-boot-sample.jar
+autostart=true
+startretries=0
+stderr_logfile=/var/log/java_app.err.log
+stdout_logfile=/var/log/java_app.out.log

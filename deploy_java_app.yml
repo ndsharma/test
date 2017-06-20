@@ -1,0 +1,62 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: install apache2
+      apt:  pkg=apache2 state=latest
+
+    - name: enable apache2 proxy
+      apache2_module: name={{item}} state=present
+      with_items:
+                - proxy
+                - proxy_http
+
+    - name: copy apache2 conf
+      template:
+              src: /vagrant/000-default.conf.j2
+              dest: /etc/apache2/sites-available/000-default.conf
+
+    - name: install supervisor
+      apt: pkg=supervisor state=latest
+
+    - name: copy supervisor conf
+      template:
+                src: /vagrant/java_app.conf.j2
+                dest: /etc/supervisor/conf.d/java_app.conf
+
+    - name: remove unwanted packages
+      action: apt pkg={{item}} state=absent
+      with_items:
+                - chef
+                - puppet
+
+    - name: open port 80 in iptables
+      command: iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+
+    - name: remove unwanted folders
+      action: file path={{item}} state=absent
+      with_items:
+                - /etc/puppet/
+                - /etc/chef/
+                - /var/lib/puppet/
+                - /var/lib/chef/
+
+    - name: create application dir
+      file: path=/tmp/java_app state=directory
+
+    - name: copy jar file
+      copy:
+          src: /vagrant/spring-boot-sample.jar
+          dest: /tmp/java_app
+
+    - name: install java jdk
+      apt: pkg=default-jdk update_cache=yes state=present
+
+    - name: restart apache2 service
+      service: name=apache2 state=restarted
+
+    - name: restart iptables
+      service: name=ufw state=restarted
+
+    - name: restart supervisor service
+      service: name=supervisor state=restarted
